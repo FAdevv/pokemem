@@ -1,2 +1,2 @@
-# pokemem
+# pokémem
 Pokémon Memory Game
