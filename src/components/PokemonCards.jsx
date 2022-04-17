@@ -1,59 +1,63 @@
 import React, { useEffect, useState } from 'react';
+import isEmpty from 'lodash/isEmpty';
+import useLocalStorage from '../hooks/useLocalStorage';
 import PokemonCard from './PokemonCard';
+import { values } from 'lodash';
 
 function PokemonCards() {
-  const [pokemonList, setPokemonList] = useState([]);
+  const [pokemonList, setPokemonList] = useLocalStorage('POKEMONLIST', []);
 
-  const pokemones = [
-    {name: "TuViejamon0", sprite: "NoCocaPorFavor0"},
-    {name: "TuViejamon1", sprite: "NoCocaPorFavor1"},
-    {name: "TuViejamon2", sprite: "NoCocaPorFavor2"},
-    {name: "TuViejamon3", sprite: "NoCocaPorFavor3"},
-  ]
+  const getPokemon = async (indexes = [], options) => {
 
-  const getPokemon = async () => {
-    let toArray = [];
-    try {
-      const url = 'https://pokeapi.co/api/v2/pokemon/?limit=20&offset=20';
-      const response = await fetch(url);
-      const data = await response.json();
-      console.log(data.results);
-      data.results.forEach((pokemon) => {
-        toArray.push(pokemon);
-        setPokemonList(toArray);
-      });
-    } catch (e) {
-      console.log(e);
+    let desiredAmount = options.amount;
+    if (options.amount % 2 === 1) {
+      desiredAmount = options.amount + 1;
     }
+
+    let indexList = [...indexes];
+    if (options.generate && isEmpty(indexList)) {
+      while (indexList.length < desiredAmount) {
+        const randomNumber = Math.floor(Math.random() * (options.fromId - options.toId + 1) + options.toId);
+        if (indexList.includes(randomNumber)) continue;
+
+        indexList.push(randomNumber);
+      }
+    }
+
+    let toArray = [];
+    let pokemonCalls = [];
+    indexList.forEach((index) => {
+      const url = `https://pokeapi.co/api/v2/pokemon/${index}`;
+      const response = fetch(url);
+      pokemonCalls.push(response);
+    });
+    Promise.all(pokemonCalls).then((values) => {
+      return Promise.all(values.map(response => response.json()));
+    }).then(values => {
+      console.log(values)
+      pokemonList.push([...values]);
+    }
+    );
   };
 
   useEffect(() => {
-    // getPokemon();
-    // console.log(pokemonList);
+    if (isEmpty(pokemonList)) {
+      getPokemon([], { generate: true, amount: 10, fromId: 1, toId: 151 })
+        .then(results => {
+          setPokemonList(results);
+        });
+    }
   }, []);
 
   return (
-    <div className="m-6 p-4 w-full outline outline-4 outline-blue-700 rounded-3xl">
-      <h1 className="w-full text-center text-3xl font-bold text-white">
+    <div className="m-6 p-4 w-full rounded-3xl">
+      <h1 className="w-full text-center text-3xl font-bold text-gray-800">
         Pokémon Memory Game
       </h1>
-      <div className="flex flex-wrap gap-4 justify-center">
-        <PokemonCard
-          pokename={pokemones[0].name}
-          pokesprite={pokemones[0].sprite.default_front}
-        ></PokemonCard>
-        <PokemonCard
-          pokename={pokemones[1].name}
-          pokesprite={pokemones[1].sprite.default_front}
-        ></PokemonCard>
-        <PokemonCard
-          pokename={pokemones[2].name}
-          pokesprite={pokemones[2].sprite.default_front}
-        ></PokemonCard>
-        <PokemonCard
-          pokename={pokemones[3].name}
-          pokesprite={pokemones[3].sprite.default_front}
-        ></PokemonCard>
+      <div className="my-6 grid grid-cols-4 gap-4">
+        {pokemonList.map((pokemon, index) => (
+          <PokemonCard key={pokemon.id} pokename={pokemon.name} pokesprite={pokemon.sprites.front_default}></PokemonCard>
+        ))}
       </div>
     </div>
   );

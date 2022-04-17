@@ -26,7 +26,7 @@ function App() {
   // }, []);
 
   return (
-    <div id="main-view" className="flex justify-center bg-black">
+    <div id="main-view" className="flex justify-center">
       <PokemonCards></PokemonCards>
     </div>
   )
